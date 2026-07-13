@@ -1,9 +1,12 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "UMECharacter.h"
+#include "Animation/AnimMontage.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/PrimitiveComponent.h"
+#include "DrawDebugHelpers.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
@@ -65,6 +68,14 @@ void AUMECharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AUMECharacter::Look);
+		
+		// Kicking
+		EnhancedInputComponent->BindAction(
+			KickAction,
+			ETriggerEvent::Started,
+			this,
+			&AUMECharacter::Kick
+		);
 	}
 	else
 	{
@@ -88,6 +99,345 @@ void AUMECharacter::Look(const FInputActionValue& Value)
 
 	// route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
+}
+
+void AUMECharacter::Kick()
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	UE_LOG(
+		LogUME,
+		Log,
+		TEXT("[LOCAL] Kick requested by %s"),
+		*GetNameSafe(this)
+	);
+
+	if (HasAuthority())
+	{
+		HandleKickOnServer();
+		return;
+	}
+
+	ServerKick();
+}
+
+void AUMECharacter::ServerKick_Implementation()
+{
+	HandleKickOnServer();
+}
+
+void AUMECharacter::MulticastPlayKickMontage_Implementation()
+{
+	PlayKickMontage();
+}
+
+void AUMECharacter::PlayKickMontage()
+{
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+
+	if (!IsValid(KickMontage))
+	{
+		UE_LOG(
+			LogUME,
+			Warning,
+			TEXT("[KICK] KickMontage is not assigned for %s"),
+			*GetNameSafe(this)
+		);
+
+		return;
+	}
+
+	const float MontageDuration = PlayAnimMontage(
+		KickMontage,
+		KickMontagePlayRate
+	);
+
+	if (MontageDuration <= 0.0f)
+	{
+		UE_LOG(
+			LogUME,
+			Warning,
+			TEXT("[KICK] Failed to play KickMontage for %s"),
+			*GetNameSafe(this)
+		);
+	}
+}
+
+void AUMECharacter::HandleKickOnServer()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+
+	if (!IsValid(World))
+	{
+		return;
+	}
+
+	const double CurrentServerTime = World->GetTimeSeconds();
+
+	if (CurrentServerTime < NextKickAllowedServerTime)
+	{
+		const double RemainingCooldown =
+			NextKickAllowedServerTime - CurrentServerTime;
+
+		UE_LOG(
+			LogUME,
+			Log,
+			TEXT("[SERVER] Kick rejected for %s. Cooldown remaining: %.2f"),
+			*GetNameSafe(this),
+			RemainingCooldown
+		);
+
+		return;
+	}
+
+	NextKickAllowedServerTime =
+	CurrentServerTime + KickCooldownSeconds;
+
+	UE_LOG(
+		LogUME,
+		Display,
+		TEXT("[SERVER] Kick accepted for %s"),
+		*GetNameSafe(this)
+	);
+
+	MulticastPlayKickMontage();
+	PerformKickTrace();
+}
+
+void AUMECharacter::PerformKickTrace()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+
+	if (!IsValid(World))
+	{
+		return;
+	}
+
+	FVector KickDirection = GetActorForwardVector();
+	KickDirection.Z = 0.0f;
+
+	if (!KickDirection.Normalize())
+	{
+		return;
+	}
+
+	const FVector TraceStart =
+		GetActorLocation() +
+		KickDirection * KickStartOffset;
+
+	const FVector TraceEnd =
+		TraceStart +
+		KickDirection * KickDistance;
+
+	FCollisionQueryParams QueryParams(
+		SCENE_QUERY_STAT(KickTrace),
+		false,
+		this
+	);
+
+	QueryParams.AddIgnoredActor(this);
+
+	const FCollisionShape KickShape =
+		FCollisionShape::MakeSphere(KickRadius);
+
+	FHitResult HitResult;
+
+	const bool bHasHit = World->SweepSingleByChannel(
+		HitResult,
+		TraceStart,
+		TraceEnd,
+		FQuat::Identity,
+		KickTraceChannel,
+		KickShape,
+		QueryParams
+	);
+
+	if (bDrawKickDebug)
+	{
+		const FColor DebugColor =
+			bHasHit ? FColor::Green : FColor::Red;
+
+		DrawDebugLine(
+			World,
+			TraceStart,
+			TraceEnd,
+			DebugColor,
+			false,
+			KickDebugDuration,
+			0,
+			2.0f
+		);
+
+		DrawDebugSphere(
+			World,
+			TraceStart,
+			KickRadius,
+			16,
+			DebugColor,
+			false,
+			KickDebugDuration
+		);
+
+		DrawDebugSphere(
+			World,
+			TraceEnd,
+			KickRadius,
+			16,
+			DebugColor,
+			false,
+			KickDebugDuration
+		);
+
+		if (bHasHit)
+		{
+			DrawDebugPoint(
+				World,
+				HitResult.ImpactPoint,
+				15.0f,
+				FColor::Yellow,
+				false,
+				KickDebugDuration
+			);
+		}
+	}
+
+	if (!bHasHit)
+	{
+		UE_LOG(
+			LogUME,
+			Log,
+			TEXT("[SERVER] Kick missed for %s"),
+			*GetNameSafe(this)
+		);
+
+		return;
+	}
+
+	UE_LOG(
+		LogUME,
+		Display,
+		TEXT(
+			"[SERVER] Kick hit Actor: %s, Component: %s, Location: %s"
+		),
+		*GetNameSafe(HitResult.GetActor()),
+		*GetNameSafe(HitResult.GetComponent()),
+		*HitResult.ImpactPoint.ToCompactString()
+	);
+	
+	ApplyKickToHit(HitResult, KickDirection);
+}
+
+void AUMECharacter::ApplyKickToHit(
+	const FHitResult& HitResult,
+	const FVector& KickDirection
+)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AActor* HitActor = HitResult.GetActor();
+	UPrimitiveComponent* HitComponent = HitResult.GetComponent();
+
+	if (!IsValid(HitActor) || !IsValid(HitComponent))
+	{
+		return;
+	}
+
+	if (ACharacter* HitCharacter = Cast<ACharacter>(HitActor))
+	{
+		FVector LaunchDirection =
+			HitCharacter->GetActorLocation() -
+			GetActorLocation();
+
+		LaunchDirection.Z = 0.0f;
+
+		if (!LaunchDirection.Normalize())
+		{
+			LaunchDirection = KickDirection;
+		}
+
+		const FVector LaunchVelocity =
+			LaunchDirection * CharacterKickStrength +
+			FVector::UpVector * CharacterKickUpwardStrength;
+
+		HitCharacter->LaunchCharacter(
+			LaunchVelocity,
+			true,
+			true
+		);
+
+		UE_LOG(
+			LogUME,
+			Display,
+			TEXT(
+				"[SERVER] Character %s was kicked. Launch velocity: %s"
+			),
+			*GetNameSafe(HitCharacter),
+			*LaunchVelocity.ToCompactString()
+		);
+
+		return;
+	}
+
+	if (!HitComponent->IsSimulatingPhysics(HitResult.BoneName))
+	{
+		UE_LOG(
+			LogUME,
+			Log,
+			TEXT(
+				"[SERVER] Actor %s was hit, but component %s does not simulate physics"
+			),
+			*GetNameSafe(HitActor),
+			*GetNameSafe(HitComponent)
+		);
+
+		return;
+	}
+
+	FVector PhysicsDirection = KickDirection;
+	PhysicsDirection.Z = 0.15f;
+
+	if (!PhysicsDirection.Normalize())
+	{
+		return;
+	}
+
+	const FVector Impulse =
+		PhysicsDirection * PhysicsKickImpulse;
+
+	HitComponent->AddImpulseAtLocation(
+		Impulse,
+		HitResult.ImpactPoint,
+		HitResult.BoneName
+	);
+
+	UE_LOG(
+		LogUME,
+		Display,
+		TEXT(
+			"[SERVER] Physics component %s was kicked. Impulse: %s"
+		),
+		*GetNameSafe(HitComponent),
+		*Impulse.ToCompactString()
+	);
 }
 
 void AUMECharacter::DoMove(float Right, float Forward)
