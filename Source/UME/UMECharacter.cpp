@@ -10,6 +10,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "AbilitySystemComponent.h"
+#include "BasicAttributeSet.h"
 #include "UME.h"
 
 AUMECharacter::AUMECharacter()
@@ -48,6 +50,10 @@ AUMECharacter::AUMECharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent->SetIsReplicated(true);
+	BasicAttributeSet = CreateDefaultSubobject<UBasicAttributeSet>(TEXT("AttributeSet"));
 }
 
 void AUMECharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

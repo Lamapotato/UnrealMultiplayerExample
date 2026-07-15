@@ -21,8 +21,11 @@ public class UME : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
-			"Slate"
-		});
+			"Slate",
+            "GameplayAbilities", 
+			"GameplayTags", 
+			"GameplayTasks"
+        });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
         DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
