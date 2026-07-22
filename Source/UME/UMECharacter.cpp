@@ -82,7 +82,9 @@ void AUMECharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
-
+	if (IsSliding) {
+		return;
+	}
 	// route the input
 	DoMove(MovementVector.X, MovementVector.Y);
 }
