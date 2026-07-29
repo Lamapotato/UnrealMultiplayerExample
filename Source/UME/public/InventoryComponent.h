@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "InventorySlotType.h"
 #include "InventoryComponent.generated.h"
 
 USTRUCT(BlueprintType)
@@ -16,10 +17,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slot")
 	TSubclassOf<AActor> ObjectClass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slot")
+	EInventorySlotType ItemType = EInventorySlotType::Generic;
+
 	/** Current number of objects in the slot (or max allowed). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slot")
 	int32 ObjectCount = 0;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Slot")
+	EInventorySlotType SlotType = EInventorySlotType::Generic;
 };
 
 USTRUCT(BlueprintType)
@@ -44,7 +50,7 @@ public:
 
 
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UME_API UInventoryComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -61,8 +67,15 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	UPROPERTY(EditAnywhere,BlueprintReadWrite)
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, ReplicatedUsing = OnRep_Slots)
 	TArray<FSlotInfo> Slots;
+
+	// OnRep function - C++ implementation
+	UFUNCTION()
+	void OnRep_Slots();
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Inventory")
+	void OnSlotsChanged(const TArray<FSlotInfo>& OldSlots, const TArray<FSlotInfo>& NewSlots);
 
 	UFUNCTION(BlueprintCallable, Category = "Inventory|Utility")
 	bool SwapBetween(UInventoryComponent* CompA, int32 IndexA,
