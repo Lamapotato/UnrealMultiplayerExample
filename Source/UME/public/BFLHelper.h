@@ -17,5 +17,7 @@ class UME_API UBFLHelper : public UBlueprintFunctionLibrary
 public:
 	UFUNCTION(BlueprintCallable)
 	static TArray<AActor*> SortActorsByDistance(const TArray<AActor*>& Actors, FVector Location);
-	
+
+	UFUNCTION(BlueprintCallable)
+	static int GetWeightedRandomIndex(const TArray<float>& Weights);
 };
