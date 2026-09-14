@@ -2,6 +2,8 @@
 
 
 #include "BFLHelper.h"
+#include "HAL/FileManager.h"
+#include "Misc/Paths.h"
 
 TArray<AActor*> UBFLHelper::SortActorsByDistance(const TArray<AActor*>& Actors, FVector Location)
 {
@@ -67,4 +69,24 @@ int UBFLHelper::GetWeightedRandomIndex(const TArray<float>& Weights)
 
     // Fallback (should never reach here if weights are valid)
     return Weights.Num() - 1;
+}
+
+TArray<FString> UBFLHelper::GetAllSaveSlots()
+{
+    TArray<FString> Result;
+
+    // Build the path to the SaveGames directory
+    const FString SaveDir = FPaths::ProjectSavedDir() / TEXT("SaveGames");
+
+    // Find all .sav files in that directory
+    TArray<FString> FoundFiles;
+    IFileManager::Get().FindFiles(FoundFiles, *SaveDir, TEXT(".sav"));
+
+    // Strip the extension from each file name
+    for (const FString& File : FoundFiles)
+    {
+        Result.Add(File.LeftChop(4)); // Remove ".sav"
+    }
+
+    return Result;
 }

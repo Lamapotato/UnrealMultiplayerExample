@@ -1,0 +1,92 @@
+{
+	"FileVersion": 3,
+	"Version": 20201,
+	"VersionName": "2.2.1-UE5.7",
+	"FriendlyName": "Auto Settings",
+	"Description": "Settings and Input Binding Framework",
+	"Category": "Settings",
+	"CreatedBy": "Sam Bonifacio",
+	"CreatedByURL": "https://www.fab.com/sellers/Sam%20Bonifacio",
+	"DocsURL": "https://autosettings.sbtools.dev/2.x/",
+	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/fcc480bac77b4373bc6c68f0ae4f9847",
+	"SupportURL": "https://autosettings.sbtools.dev/2.x/support",
+	"EngineVersion": "5.7.0",
+	"CanContainContent": true,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "SBAutomationAutoSettings",
+			"Type": "DeveloperTool",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "SBAutomationAutoSettingsEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "SBClangAutoSettings",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "AutoSettingsCore",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "AutoSettings",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "AutoSettingsUI",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "AutoSettingsInput",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "AutoSettingsEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "AutoSettingsTests",
+			"Type": "DeveloperTool",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "AutoSettingsCommonUITests",
+			"Type": "DeveloperTool",
+			"LoadingPhase": "None"
+		},
+		{
+			"Name": "AutoSettingsConsole",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "AutoSettingsCommonUI",
+			"Type": "Runtime",
+			"LoadingPhase": "None"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "EnhancedInput",
+			"Enabled": true
+		},
+		{
+			"Name": "CommonUI",
+			"Enabled": false
+		},
+		{
+			"Name": "CQTest",
+			"Enabled": true
+		}
+	]
+}

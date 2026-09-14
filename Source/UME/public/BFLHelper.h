@@ -20,4 +20,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	static int GetWeightedRandomIndex(const TArray<float>& Weights);
+
+    /**
+     * Returns all save slot names found in the project's SaveGames directory.
+     * File extensions (.sav) are stripped from the returned names.
+     */
+    UFUNCTION(BlueprintCallable, Category = "SaveSystem")
+    static TArray<FString> GetAllSaveSlots();
 };
